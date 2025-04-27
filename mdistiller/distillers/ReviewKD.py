@@ -40,6 +40,7 @@ class ReviewKD(Distiller):
         self.warmup_epochs = cfg.REVIEWKD.WARMUP_EPOCHS
         self.stu_preact = cfg.REVIEWKD.STU_PREACT
         self.max_mid_channel = cfg.REVIEWKD.MAX_MID_CHANNEL
+        self.cfg = cfg
 
         abfs = nn.ModuleList()
         mid_channel = min(512, in_channels[-1])
@@ -65,8 +66,12 @@ class ReviewKD(Distiller):
 
     def forward_train(self, image, target, **kwargs):
         logits_student, features_student = self.student(image)
+        
         with torch.no_grad():
-            logits_teacher, features_teacher = self.teacher(image)
+            if self.cfg.DIV.USAGE:
+                logits_teacher, features_teacher, loss_dict = self.teacher(image, loss=True, target=target)
+            else:
+                logits_teacher, features_teacher = self.teacher(image)
 
         # get features
         if self.stu_preact:
@@ -96,6 +101,10 @@ class ReviewKD(Distiller):
             * min(kwargs["epoch"] / self.warmup_epochs, 1.0)
             * hcl_loss(results, features_teacher)
         )
+        if self.cfg.DIV.USAGE:
+            for k, v in loss_dict.items():
+                loss_reviewkd += v
+        
         losses_dict = {
             "loss_ce": loss_ce,
             "loss_kd": loss_reviewkd,

@@ -391,37 +391,7 @@ class CRDDOT(BaseTrainer):
         return msg
 
 
-class CRDAUGTrainer(BaseTrainer):
-    def init_optimizer(self, cfg):
-        if cfg.SOLVER.TYPE == "SGD":
-            m_task = cfg.SOLVER.MOMENTUM - cfg.SOLVER.DOT.DELTA
-            m_kd = cfg.SOLVER.MOMENTUM + cfg.SOLVER.DOT.DELTA
-            optimizer = DistillationOrientedTrainer(
-                self.distiller.module.get_learnable_parameters(),
-                lr=cfg.SOLVER.LR,
-                momentum=m_task,
-                momentum_kd=m_kd,
-                weight_decay=cfg.SOLVER.WEIGHT_DECAY,
-            )
-        else:
-            raise NotImplementedError(cfg.SOLVER.TYPE)
-        return optimizer
-
-    def train(self, resume=False):
-        epoch = 1
-        if resume:
-            state = load_checkpoint(os.path.join(self.log_path, "latest"))
-            epoch = state["epoch"] + 1
-            self.distiller.load_state_dict(state["model"])
-            self.optimizer.load_state_dict(state["optimizer"])
-            self.best_acc = state["best_acc"]
-        while epoch < self.cfg.SOLVER.EPOCHS + 1:
-            self.train_epoch(epoch)
-            epoch += 1
-        print(log_msg("Best accuracy:{}".format(self.best_acc), "EVAL"))
-        with open(os.path.join(self.log_path, "worklog.txt"), "a") as writer:
-            writer.write("best_acc\t" + "{:.2f}".format(float(self.best_acc)))
-
+class CRDAUGTrainer(BaseTrainer):    
     def train_iter(self, data, epoch, train_meters):
         self.optimizer.zero_grad()
         train_start_time = time.time()
@@ -432,47 +402,19 @@ class CRDAUGTrainer(BaseTrainer):
         image_weak, image_strong = image_weak.cuda(non_blocking=True), image_strong.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)
         index = index.cuda(non_blocking=True)
-        contrastive_index = contrastive_index.cuda(non_blocking=True)
 
         # forward
-        preds, losses_dict = self.distiller(
-            image_weak=image_weak, image_strong=image_strong, target=target, index=index, contrastive_index=contrastive_index, epoch=epoch
-        )
-                
-        for k in losses_dict:
-            losses_dict[k] = losses_dict[k].mean()
+        preds, losses_dict = self.distiller(image_weak=image_weak, image_strong=image_strong, target=target, index=index, contrastive_index=contrastive_index, epoch=epoch)
 
-        loss_ce = losses_dict.get('loss_ce', 0.0)
-        loss_kd = losses_dict.get('loss_kd', 0.0)
-
-        for k, v in losses_dict.items():
-            if k not in ['loss_ce', 'loss_kd']:
-                loss_kd += v
-                
-        losses_dict = {
-            'loss_ce': loss_ce,
-            'loss_kd': loss_kd
-        }
-            
-        #loss_ce, loss_kd = losses_dict['loss_ce'].mean(), losses_dict['loss_kd'].mean()
-        self.optimizer.zero_grad(set_to_none=True)
-        loss_kd.backward(retain_graph=True)
-        self.optimizer.step_kd()
-        self.optimizer.zero_grad(set_to_none=True)
-        loss_ce.backward()
-        # self.optimizer.step((1 - epoch / 240.))
+        # backward
+        loss = sum([l.mean() for l in losses_dict.values()])
+        loss.backward()
         self.optimizer.step()
-
-
         train_meters["training_time"].update(time.time() - train_start_time)
         # collect info
-        if isinstance(image, list):
-            batch_size = image[0].size(0)
-        else:
-            batch_size = image.size(0)
-            
+        batch_size = image_weak.size(0)
         acc1, acc5 = accuracy(preds, target, topk=(1, 5))
-        train_meters["losses"].update((loss_ce + loss_kd).cpu().detach().numpy().mean(), batch_size)
+        train_meters["losses"].update(loss.cpu().detach().numpy().mean(), batch_size)
         train_meters["top1"].update(acc1[0], batch_size)
         train_meters["top5"].update(acc5[0], batch_size)
         # print info
@@ -485,4 +427,3 @@ class CRDAUGTrainer(BaseTrainer):
             train_meters["top5"].avg,
         )
         return msg
-
