@@ -1,11 +1,11 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "crd,res32x4,res8x4"
+  TAG: "TekapT,TekapL,wrn_40_2,MobileNetV2"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD"
-  TEACHER: "resnet32x4"
-  STUDENT: "resnet8x4"
+  TEACHER: "wrn_40_2"
+  STUDENT: "MobileNetV2"
 SOLVER:
   BATCH_SIZE: 64
   EPOCHS: 240
@@ -16,3 +16,9 @@ SOLVER:
   MOMENTUM: 0.9
   TYPE: "SGD"
   TRAINER: "crd" 
+TEKAP:
+  USAGE: True
+  AUGNUM : 3
+  T : 4
+  FEAT : True
+  LOGIT : True

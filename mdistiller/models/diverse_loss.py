@@ -20,7 +20,6 @@ class Feature_inter_Loss(nn.Module):
         Returns:
             The inter angle loss
         """
-        
         N = len(view_feature_list)
         B, D = view_feature_list[0].size()
         
@@ -129,7 +128,7 @@ class Feature_intra_Loss(nn.Module):
         
 
 class Logit_inter_Loss(nn.Module):
-    def __init__(self, T=1):
+    def __init__(self, T=4):
         super(Logit_inter_Loss, self).__init__()
         self.margin = nn.Parameter(torch.tensor(0.1), requires_grad=True)
         self.T = T

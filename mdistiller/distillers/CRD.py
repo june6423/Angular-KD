@@ -6,6 +6,87 @@ import math
 from ._base import Distiller
 
 
+def randomize(x):
+    x_noise = x.clone()
+    noise = torch.randn_like(x_noise) * 0.1 + 0.0
+    x_noise = 0.9 * x_noise + 0.1 * noise
+    return x_noise
+
+def dkd_loss(logits_student, logits_teacher, target, alpha=1.0, beta=8.0, temperature=4.0):
+    gt_mask = _get_gt_mask(logits_student, target)
+    other_mask = _get_other_mask(logits_student, target)
+    pred_student = F.softmax(logits_student / temperature, dim=1)
+    #pred_teacher = F.softmax(logits_teacher / temperature, dim=1)
+    pred_teacher = logits_teacher
+    pred_student = cat_mask(pred_student, gt_mask, other_mask)
+    pred_teacher = cat_mask(pred_teacher, gt_mask, other_mask)
+    log_pred_student = torch.log(pred_student + 1e-12)
+    tckd_loss = (
+        F.kl_div(log_pred_student, pred_teacher, size_average=False)
+        * (temperature**2)
+        / target.shape[0]
+    )
+    pred_teacher_part2 = F.softmax(
+        torch.log(logits_teacher + 1e-12) - 1000.0 * gt_mask, dim=1
+    )
+    log_pred_student_part2 = F.log_softmax(
+        logits_student / temperature - 1000.0 * gt_mask, dim=1
+    )
+    nckd_loss = (
+        F.kl_div(log_pred_student_part2, pred_teacher_part2, size_average=False)
+        * (temperature**2)
+        / target.shape[0]
+    )
+    return alpha * tckd_loss + beta * nckd_loss
+
+
+def dkd_loss_tekap(logits_student, logits_teacher, target, alpha=1.0, beta=8.0, temperature=4.0):
+    gt_mask = _get_gt_mask(logits_student, target)
+    other_mask = _get_other_mask(logits_student, target)
+    pred_student = F.softmax(logits_student / temperature, dim=1)
+    pred_teacher = F.softmax(logits_teacher / temperature, dim=1)
+    pred_student = cat_mask(pred_student, gt_mask, other_mask)
+    pred_teacher = cat_mask(pred_teacher, gt_mask, other_mask)
+    log_pred_student = torch.log(pred_student)
+    tckd_loss = (
+        F.kl_div(log_pred_student, pred_teacher, size_average=False)
+        * (temperature**2)
+        / target.shape[0]
+    )
+    pred_teacher_part2 = F.softmax(
+        logits_teacher / temperature - 1000.0 * gt_mask, dim=1
+    )
+    log_pred_student_part2 = F.log_softmax(
+        logits_student / temperature - 1000.0 * gt_mask, dim=1
+    )
+    nckd_loss = (
+        F.kl_div(log_pred_student_part2, pred_teacher_part2, size_average=False)
+        * (temperature**2)
+        / target.shape[0]
+    )
+    return alpha * tckd_loss + beta * nckd_loss
+
+
+
+def _get_gt_mask(logits, target):
+    target = target.reshape(-1)
+    mask = torch.zeros_like(logits).scatter_(1, target.unsqueeze(1), 1).bool()
+    return mask
+
+
+def _get_other_mask(logits, target):
+    target = target.reshape(-1)
+    mask = torch.ones_like(logits).scatter_(1, target.unsqueeze(1), 0).bool()
+    return mask
+
+
+def cat_mask(t, mask1, mask2):
+    t1 = (t * mask1).sum(dim=1, keepdims=True)
+    t2 = (t * mask2).sum(1, keepdims=True)
+    rt = torch.cat([t1, t2], dim=1)
+    return rt
+
+
 class CRD(Distiller):
     """Contrastive Representation Distillation"""
 
@@ -13,9 +94,7 @@ class CRD(Distiller):
         super(CRD, self).__init__(student, teacher)
         self.ce_loss_weight = cfg.CRD.LOSS.CE_WEIGHT
         self.feat_loss_weight = cfg.CRD.LOSS.FEAT_WEIGHT
-        self.diverse_kd = cfg.DIV.USAGE
-        self.tekap = cfg.TEKAP.USAGE
-        self.T = cfg.TEKAP.T
+        self.cfg = cfg
         self.teakp_augnum = cfg.TEKAP.AUGNUM
         self.init_crd_modules(
             cfg.CRD.FEAT.STUDENT_DIM,
@@ -72,21 +151,36 @@ class CRD(Distiller):
     def forward_train(self, image, target, index, contrastive_index, **kwargs):
         logits_student, feature_student = self.student(image)
         
-        if self.diverse_kd:
-            logit_teacher, feature_teacher, loss_dict = self.teacher(image, loss=True, target=target)
-            loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
+        if self.cfg.DIV.USAGE:
+            logits_teacher, feature_teacher, loss_dict = self.teacher(image, loss=True, target=target)
+            
+            loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)         
             loss_crd = self.feat_loss_weight * self.crd_loss(
                 feature_student["pooled_feat"],
                 feature_teacher["pooled_feat"],
                 index,
                 contrastive_index,
             )
-            loss_dict["loss_ce"] = loss_ce + loss_dict["ce_loss"]
+            
+            if self.cfg.DIV.DKD:
+                loss_crd +=  1 * min(kwargs["epoch"] /20, 1.0) * dkd_loss(
+                    logits_student,
+                    logits_teacher,
+                    target,
+                    alpha = self.cfg.DKD.ALPHA,
+                    beta = self.cfg.DKD.BETA,
+                    temperature = self.cfg.DKD.T,
+                )
+            
+            
+            temp = loss_dict['ce_loss']
+            loss_dict["loss_ce"] = loss_ce + temp
             loss_dict['loss_kd'] = loss_crd
+            
             return logits_student, loss_dict
             
-        elif self.tekap:
-            logit_teacher, feature_teacher = self.teacher(image)
+        elif self.cfg.TEKAP.USAGE:
+            logits_teacher, feature_teacher = self.teacher(image)
             loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
             loss_crd = self.feat_loss_weight * self.crd_loss(
                 feature_student["pooled_feat"],
@@ -94,34 +188,42 @@ class CRD(Distiller):
                 index,
                 contrastive_index,
             )
+            loss_dkd = 0.0
             
-            p_s = F.log_softmax(logits_student/self.T, dim=1)
+            p_s = F.log_softmax(logits_student/self.cfg.TEKAP.T, dim=1)
             
-            for i in range(self.teakp_augnum):
-                feat_noise = feature_teacher["pooled_feat"].clone()
-                noise = torch.randn_like(feat_noise) * 0.1 + 0.0
-                feat_noise = 0.9*feat_noise + 0.1*noise
+            for i in range(self.cfg.TEKAP.AUGNUM):
+                if self.cfg.TEKAP.FEAT:
+                    feat_noise = randomize(feature_teacher["pooled_feat"])
+                            
+                    loss_crd += self.feat_loss_weight * self.crd_loss(
+                        feature_student["pooled_feat"],
+                        feat_noise,
+                        index,
+                        contrastive_index,
+                    )
+                    
+                if self.cfg.TEKAP.LOGIT:
+                    logit_noise = randomize(logits_teacher)
+                    
+                    if self.cfg.TEKAP.DKD:
+                        loss_dkd += min(kwargs["epoch"] /20, 1.0) * dkd_loss_tekap(
+                            logits_student,
+                            logit_noise,
+                            target,
+                            alpha = self.cfg.DKD.ALPHA,
+                            beta = self.cfg.DKD.BETA,
+                            temperature = self.cfg.DKD.T,
+                        )
+                    else:
+                        loss_dkd += self.ce_loss_weight * 0.8* (F.kl_div(p_s, logit_noise, size_average=False) * (self.cfg.TEKAP.T**2) / logits_student.shape[0])
                 
-                logit_noise = torch.randn(logit_teacher.shape[0], logit_teacher.shape[1]).cuda()
-                #random_logits1 = random_logits1 * torch.sqrt(torch.tensor(1))
-                logit_noise = logit_noise*0.1 + logit_teacher*0.9
-                logit_noise = F.softmax(logit_noise / self.T, dim=1)
-                        
-                loss_crd += self.feat_loss_weight * self.crd_loss(
-                    feature_student["pooled_feat"],
-                    feat_noise,
-                    index,
-                    contrastive_index,
-                )
-                
-                loss_ce += self.ce_loss_weight * 0.8* (F.kl_div(p_s, logit_noise, size_average=False) * (self.T**2) / logits_student.shape[0])
-                
-                losses_dict = {
-                    "loss_ce": loss_ce,
-                    "loss_kd": loss_crd,
-                }
-                return logits_student, losses_dict                      
-            
+            losses_dict = {
+                "loss_ce": loss_ce,
+                "loss_kd": loss_crd + loss_dkd,
+            }
+            return logits_student, losses_dict                      
+        
         else:
             with torch.no_grad():
                 _, feature_teacher = self.teacher(image)

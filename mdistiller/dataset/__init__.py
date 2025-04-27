@@ -1,4 +1,4 @@
-from .cifar100 import get_cifar100_dataloaders, get_cifar100_dataloaders_sample
+from .cifar100 import get_cifar100_dataloaders, get_cifar100_dataloaders_sample, get_cifar100_dataloaders_sample_strong
 from .imagenet import get_imagenet_dataloaders, get_imagenet_dataloaders_sample
 from .tiny_imagenet import get_tinyimagenet_dataloader, get_tinyimagenet_dataloader_sample
 
@@ -7,6 +7,14 @@ def get_dataset(cfg):
     if cfg.DATASET.TYPE == "cifar100":
         if cfg.DISTILLER.TYPE == "CRD":
             train_loader, val_loader, num_data = get_cifar100_dataloaders_sample(
+                batch_size=cfg.SOLVER.BATCH_SIZE,
+                val_batch_size=cfg.DATASET.TEST.BATCH_SIZE,
+                num_workers=cfg.DATASET.NUM_WORKERS,
+                k=cfg.CRD.NCE.K,
+                mode=cfg.CRD.MODE,
+            )
+        elif cfg.DISTILLER.TYPE == "CRD_mlkd" or cfg.DISTILLER.TYPE == "CRD_tekap":
+            train_loader, val_loader, num_data = get_cifar100_dataloaders_sample_strong(
                 batch_size=cfg.SOLVER.BATCH_SIZE,
                 val_batch_size=cfg.DATASET.TEST.BATCH_SIZE,
                 num_workers=cfg.DATASET.NUM_WORKERS,

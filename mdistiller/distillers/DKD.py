@@ -61,43 +61,24 @@ class DKD(Distiller):
         self.beta = cfg.DKD.BETA
         self.temperature = cfg.DKD.T
         self.warmup = cfg.DKD.WARMUP
-        self.diverse_kd = cfg.DIV.USAGE
-        self.cfg = cfg
 
     def forward_train(self, image, target, **kwargs):
-        logits_student, _ = self.student(image)  
-                
-        if self.diverse_kd:
-            logits_teacher, feature_teacher, loss_dict = self.teacher(image, loss=True, target=target)
-            loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
-            loss_dkd = min(kwargs["epoch"] / self.warmup, 1.0) * dkd_loss(
-                logits_student,
-                logits_teacher,
-                target,
-                self.alpha,
-                self.beta,
-                self.temperature,
-            )
-            loss_dict["loss_ce"] = loss_ce + loss_dict["ce_loss"]
-            loss_dict['loss_kd'] = loss_dkd
-            return logits_student, loss_dict
-        
-        else:
-            with torch.no_grad():
-                logits_teacher, _ = self.teacher(image)
-            
-            # losses
-            loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
-            loss_dkd = min(kwargs["epoch"] / self.warmup, 1.0) * dkd_loss(
-                logits_student,
-                logits_teacher,
-                target,
-                self.alpha,
-                self.beta,
-                self.temperature,
-            )
-            losses_dict = {
-                "loss_ce": loss_ce,
-                "loss_kd": loss_dkd,
-            }
-            return logits_student, losses_dict
+        logits_student, _ = self.student(image)
+        with torch.no_grad():
+            logits_teacher, _ = self.teacher(image)
+
+        # losses
+        loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
+        loss_dkd = min(kwargs["epoch"] / self.warmup, 1.0) * dkd_loss(
+            logits_student,
+            logits_teacher,
+            target,
+            self.alpha,
+            self.beta,
+            self.temperature,
+        )
+        losses_dict = {
+            "loss_ce": loss_ce,
+            "loss_kd": loss_dkd,
+        }
+        return logits_student, losses_dict

@@ -1,19 +1,28 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "dkd,vgg13,vgg8"
+  TAG: "Our_FL_dot,dkd,vgg13,vgg8,2"
   PROJECT: "cifar100_baselines"
 DISTILLER:
-  TYPE: "DKD"
+  TYPE: "CRD"
   TEACHER: "vgg13"
   STUDENT: "vgg8"
 SOLVER:
   BATCH_SIZE: 64
   EPOCHS: 240
-  LR: 0.05
+  LR: 0.025
   LR_DECAY_STAGES: [150, 180, 210]
   LR_DECAY_RATE: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
+  TRAINER: "crd_dot" 
 DKD:
   BETA: 6.0
+DIV:
+  USAGE: True
+  AUGNUM : 5
+  DKD : True
+  FEAT_INTERWEIGHT : 0.1
+  FEAT_INTRAWEIGHT : 1.0
+  LOGIT_INTERWEIGHT : 1.0
+  LOGIT_INTRAWEIGHT : 1.0

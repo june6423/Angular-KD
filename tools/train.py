@@ -68,17 +68,39 @@ def main(cfg, resume, opts):
             model_student = model_dict[cfg.DISTILLER.STUDENT][0](
                 num_classes=num_classes
             )
+        
+        if "CRD" in cfg.DISTILLER.TYPE:
+            if cfg.DATASET.TYPE == "imagenet":
+                h = 224
+            else:
+                h = 32
+            
+            data = torch.randn(2, 3, h, h).cuda()
+            model_teacher.eval().cuda()
+            model_student.eval().cuda()
+            
+            with torch.no_grad():
+                _, feat_t = model_teacher(data)
+                _, feat_s = model_student(data)
+            
+            cfg.CRD.FEAT.defrost()
+            cfg.CRD.FEAT.TEACHER_DIM = feat_t['pooled_feat'].shape[1]
+            cfg.CRD.FEAT.STUDENT_DIM = feat_s['pooled_feat'].shape[1]
+            cfg.CRD.FEAT.freeze()
+        
         if cfg.DIV.USAGE:
             model_teacher = TeacherEnsemble(cfg, model_teacher, num_classes=num_classes)
-        if cfg.DISTILLER.TYPE == "CRD":
+            
+            
+        if "CRD" in cfg.DISTILLER.TYPE:           
             distiller = distiller_dict[cfg.DISTILLER.TYPE](
                 model_student, model_teacher, cfg, num_data
             )
+              
         else:
             distiller = distiller_dict[cfg.DISTILLER.TYPE](
                 model_student, model_teacher, cfg
             )
-    
     #distiler = distiller.cuda()
     distiller = torch.nn.DataParallel(distiller.cuda())
     

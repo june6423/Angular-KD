@@ -53,7 +53,7 @@ class View_Generator(torch.nn.Module):
         return view_logit_list, view_feature_list
 
 
-def weight_sum_logit(logit_t, view_list):
+def weight_sum_logit(logit_t, view_list, temp=4):
     
     weight = [0.8] * len(view_list)
     weight.append(1.0)
@@ -63,7 +63,7 @@ def weight_sum_logit(logit_t, view_list):
     
     view_list.append(logit_t)
     logit_tensor = torch.stack(view_list, dim=1) # [B, N, D]
-    logit_tensor = F.softmax(logit_tensor, dim=2) # [B, N, D]
+    logit_tensor = F.softmax(logit_tensor/temp, dim=2) # [B, N, D]
     logit_tensor = torch.sum(logit_tensor * weight, dim=1) # [B, D]
     return logit_tensor
 
@@ -99,7 +99,7 @@ class TeacherEnsemble(nn.Module):
         self.logit_inter_loss = Logit_inter_Loss()
         self.logit_intra_loss = Logit_intra_Loss()
         
-    def forward(self, x, loss = False, target = None):
+    def forward(self, x, loss = False, target = None, temp=4, various_temp = False):
         
         assert loss in [True, False]
         
@@ -108,7 +108,11 @@ class TeacherEnsemble(nn.Module):
         with torch.no_grad():
             logit_t, feat_t = self.original_teacher(x)
         
-        view_logit_list, view_feature_list = self.view_generator(feat_t["pooled_feat"])
+        pooled_feat_grad_on = feat_t["pooled_feat"].detach().requires_grad_()
+        
+        assert pooled_feat_grad_on.dim() == 2
+
+        view_logit_list, view_feature_list = self.view_generator(pooled_feat_grad_on)
         
         loss_dict["feature_inter_loss"] = self.cfg.DIV.FEAT_INTERWEIGHT * self.feature_inter_loss(feat_t["pooled_feat"], view_feature_list)
         loss_dict["feature_intra_loss"] = self.cfg.DIV.FEAT_INTRAWEIGHT * self.feature_intra_loss(feat_t["pooled_feat"], view_feature_list)
@@ -121,13 +125,16 @@ class TeacherEnsemble(nn.Module):
                 ce_loss += F.cross_entropy(view_logit_list[i], target)
             loss_dict["ce_loss"] = 0.8 * ce_loss          
         
-        logit_tensor = weight_sum_logit(logit_t, view_logit_list)
+        logit_tensor = weight_sum_logit(logit_t, view_logit_list, temp=temp)
         feat_tensor = weight_sum_feature(feat_t["pooled_feat"], view_feature_list)
         feat_t['pooled_feat'] = feat_tensor
         
+        if various_temp:
+            logit_dict = {}
+            for temp in [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]:
+                logit_dict[temp] = weight_sum_logit(logit_t, view_logit_list, temp=temp)
+            return logit_tensor, feat_t, loss_dict, logit_dict
+        
         if loss:
             return logit_tensor, feat_t, loss_dict
-        else:
-            return logit_tensor, feat_t
-            
-            
+        return logit_tensor, feat_t

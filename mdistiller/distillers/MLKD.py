@@ -92,7 +92,7 @@ class MLKD(Distiller):
         self.temperature = cfg.KD.TEMPERATURE
         self.ce_loss_weight = cfg.KD.LOSS.CE_WEIGHT
         self.kd_loss_weight = cfg.KD.LOSS.KD_WEIGHT
-        self.logit_stand = cfg.EXPERIMENT.LOGIT_STAND 
+        self.logit_stand = False 
 
     def forward_train(self, image_weak, image_strong, target, **kwargs):
         logits_student_weak, _ = self.student(image_weak)
