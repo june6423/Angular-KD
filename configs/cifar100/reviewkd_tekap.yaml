@@ -1,26 +1,29 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL,mlkd,wrn_40_2,MobileNetV2"
+  TAG: "TeKAP,reviewkd,vgg13,MobileNetV2" #res32x4,res8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
-  TYPE: "CRD_mlkd"
-  TEACHER: "wrn_40_2"
+  TYPE: "REVIEWKD"
+  TEACHER: "vgg13" #"resnet32x4"
   STUDENT: "MobileNetV2"
+REVIEWKD:
+  REVIEWKD_WEIGHT: 5.0
 SOLVER:
   BATCH_SIZE: 64
-  EPOCHS: 480
-  LR: 0.005
+  EPOCHS: 240
+  LR: 0.01
   LR_DECAY_STAGES: [150, 180, 210]
   LR_DECAY_RATE: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
   TRAINER: "crd_aug" 
-DIV:
+TEKAP:
   USAGE: True
-  MLKD : True
-  AUGNUM : 5
-  FEAT_INTERWEIGHT : 0.1
-  FEAT_INTRAWEIGHT : 1.0
-  LOGIT_INTERWEIGHT : 1.0
-  LOGIT_INTRAWEIGHT : 1.0
+  AUGNUM : 3
+  T : 4
+  FEAT : True
+  LOGIT : True
+  DKD : True
+
+

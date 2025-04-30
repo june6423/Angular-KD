@@ -56,7 +56,7 @@ def cat_mask(t, mask1, mask2):
 
 def randomize(x):
     x_noise = x.clone()
-    noise = torch.randn_like(x_noise) * 0.1 + 0.0
+    noise = torch.randn_like(x_noise)
     x_noise = 0.9 * x_noise + 0.1 * noise
     return x_noise
 

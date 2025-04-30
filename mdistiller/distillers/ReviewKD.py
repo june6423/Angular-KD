@@ -28,6 +28,41 @@ def hcl_loss(fstudent, fteacher):
     return loss_all
 
 
+def randomize(x):
+    x_noise = x.clone()
+    noise = torch.randn_like(x_noise)
+    x_noise = 0.9 * x_noise + 0.1 * noise
+    return x_noise
+
+
+def hcl_loss_tekap(fstudent, fteacher, augnum):
+    loss_all = 0.0
+    for index in range(augnum+1):
+        for fs, ft in zip(fstudent, fteacher):
+            n, c, h, w = fs.shape
+            if index != 0:
+                fs_noise = randomize(fs)
+                ft_noise = randomize(ft)
+            else:
+                fs_noise = fs
+                ft_noise = ft
+            
+            loss = F.mse_loss(fs_noise, ft_noise, reduction="mean")
+            cnt = 1.0
+            tot = 1.0
+            for l in [4, 2, 1]:
+                if l >= h:
+                    continue
+                tmpfs = F.adaptive_avg_pool2d(fs_noise, (l, l))
+                tmpft = F.adaptive_avg_pool2d(ft_noise, (l, l))
+                cnt /= 2.0
+                loss += F.mse_loss(tmpfs, tmpft, reduction="mean") * cnt
+                tot += cnt
+            loss = loss / tot
+            loss_all = loss_all + loss
+    return loss_all
+
+
 class ReviewKD(Distiller):
     def __init__(self, student, teacher, cfg):
         super(ReviewKD, self).__init__(student, teacher)
@@ -72,7 +107,6 @@ class ReviewKD(Distiller):
                 logits_teacher, features_teacher, loss_dict = self.teacher(image, loss=True, target=target)
             else:
                 logits_teacher, features_teacher = self.teacher(image)
-
         # get features
         if self.stu_preact:
             x = features_student["preact_feats"] + [
@@ -83,6 +117,7 @@ class ReviewKD(Distiller):
                 features_student["pooled_feat"].unsqueeze(-1).unsqueeze(-1)
             ]
         x = x[::-1]
+        x = x[:-1]
         results = []
         out_features, res_features = self.abfs[0](x[0], out_shape=self.out_shapes[0])
         results.append(out_features)
@@ -96,11 +131,20 @@ class ReviewKD(Distiller):
         ]
         # losses
         loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
-        loss_reviewkd = (
-            self.reviewkd_loss_weight
-            * min(kwargs["epoch"] / self.warmup_epochs, 1.0)
-            * hcl_loss(results, features_teacher)
-        )
+        
+        if self.cfg.TEKAP.USAGE:
+            loss_reviewkd = (
+                self.reviewkd_loss_weight
+                * min(kwargs["epoch"] / self.warmup_epochs, 1.0)
+                * hcl_loss_tekap(results, features_teacher, self.cfg.TEKAP.AUGNUM)
+            )
+        else:
+            loss_reviewkd = (
+                self.reviewkd_loss_weight
+                * min(kwargs["epoch"] / self.warmup_epochs, 1.0)
+                * hcl_loss(results, features_teacher)
+            )
+            
         if self.cfg.DIV.USAGE:
             for k, v in loss_dict.items():
                 loss_reviewkd += v

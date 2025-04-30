@@ -69,7 +69,7 @@ def main(cfg, resume, opts):
                 num_classes=num_classes
             )
         
-        if "CRD" in cfg.DISTILLER.TYPE:
+        if cfg.DIV.USAGE:
             if cfg.DATASET.TYPE == "imagenet":
                 h = 224
             else:
@@ -87,8 +87,6 @@ def main(cfg, resume, opts):
             cfg.CRD.FEAT.TEACHER_DIM = feat_t['pooled_feat'].shape[1]
             cfg.CRD.FEAT.STUDENT_DIM = feat_s['pooled_feat'].shape[1]
             cfg.CRD.FEAT.freeze()
-        
-        if cfg.DIV.USAGE:
             model_teacher = TeacherEnsemble(cfg, model_teacher, num_classes=num_classes)
             
             

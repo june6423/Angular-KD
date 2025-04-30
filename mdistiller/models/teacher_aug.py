@@ -114,6 +114,7 @@ class TeacherEnsemble(nn.Module):
 
         view_logit_list, view_feature_list = self.view_generator(pooled_feat_grad_on)
         
+        
         loss_dict["feature_inter_loss"] = self.cfg.DIV.FEAT_INTERWEIGHT * self.feature_inter_loss(feat_t["pooled_feat"], view_feature_list)
         loss_dict["feature_intra_loss"] = self.cfg.DIV.FEAT_INTRAWEIGHT * self.feature_intra_loss(feat_t["pooled_feat"], view_feature_list)
         loss_dict["logit_inter_loss"] = self.cfg.DIV.LOGIT_INTERWEIGHT * self.logit_inter_loss(logit_t, view_logit_list)
