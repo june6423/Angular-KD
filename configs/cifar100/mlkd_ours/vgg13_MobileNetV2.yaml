@@ -1,9 +1,9 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "MLKD,vgg13,mv2"
+  TAG: "OursFL,MLKD,vgg13,mv2"
   PROJECT: "cifar100_baselines"
 DISTILLER:
-  TYPE: "MLKD"
+  TYPE: "CRD_mlkd"
   TEACHER: "vgg13"
   STUDENT: "MobileNetV2"
 SOLVER:
@@ -15,4 +15,13 @@ SOLVER:
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "ours"
+  TRAINER: "crd_aug"
+DIV:
+  USAGE: True
+  AUGNUM : 5
+  FEAT_INTERWEIGHT : 0.1
+  FEAT_INTRAWEIGHT : 1.0
+  LOGIT_INTERWEIGHT : 1.0
+  LOGIT_INTRAWEIGHT : 1.0
+  MLKD : True
+

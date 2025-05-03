@@ -76,10 +76,10 @@ class Feature_inter_Loss(nn.Module):
             diversify_loss = cos_sim_matrix / (N * (N-1) * B) # [1]
             
         else:
-            diversify_loss = torch.zeros(1, device=sim_with_teacher.device)
+            diversify_loss = torch.tensor(0.0, device=sim_with_teacher.device)
         
         
-        inter_loss = feature_cont_loss + diversify_loss.item()
+        inter_loss = feature_cont_loss + diversify_loss
         return inter_loss
 
 
@@ -187,9 +187,9 @@ class Logit_inter_Loss(nn.Module):
             diversify_loss = cos_sim_matrix / (N * (N-1) * B) # [1]
         
         else:
-            diversify_loss = torch.zeros(1, device=sim_with_teacher.device)
+            diversify_loss = torch.tensor(0.0, device=sim_with_teacher.device)
         
-        inter_loss = feature_cont_loss + diversify_loss.item() 
+        inter_loss = feature_cont_loss + diversify_loss
         return inter_loss
     
 

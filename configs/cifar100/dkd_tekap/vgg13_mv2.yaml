@@ -1,9 +1,9 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "dkd,vgg13,mv2"
+  TAG: "tekap,dkd,vgg13,mv2"
   PROJECT: "cifar100_baselines"
 DISTILLER:
-  TYPE: "DKD"
+  TYPE: "CRD"
   TEACHER: "vgg13"
   STUDENT: "MobileNetV2"
 SOLVER:
@@ -15,6 +15,16 @@ SOLVER:
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
+  TRAINER: "crd"
 DKD:
   BETA: 6.0
+TEKAP:
+  USAGE: True
+  AUGNUM : 3
+  T : 4
+  FEAT : True
+  LOGIT : True
+  DKD : True
+
+
 
