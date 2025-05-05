@@ -19,4 +19,8 @@ SOLVER:
 TEKAP:
   USAGE: True
   AUGNUM : 3
+<<<<<<< HEAD
   T : 4
+=======
+  T : 4
+>>>>>>> 398197a3ccbc45b2f6dfe5e9b68991bbd45a9fa8

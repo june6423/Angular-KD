@@ -17,7 +17,6 @@ SOLVER:
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "crd_aug" 
 DIV:
   USAGE: True
   AUGNUM : 5

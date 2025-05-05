@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL_dot,dkd,resnet32x4,resnet8x4"
+  TAG: "Our_FL,dkd,resnet32x4,resnet8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD"
@@ -15,7 +15,7 @@ SOLVER:
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "crd_dot" 
+  TRAINER: "crd" 
 DIV:
   USAGE: True
   AUGNUM : 5

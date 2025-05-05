@@ -78,6 +78,10 @@ class Feature_inter_Loss(nn.Module):
         else:
             diversify_loss = torch.tensor(0.0, device=sim_with_teacher.device)
         
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 398197a3ccbc45b2f6dfe5e9b68991bbd45a9fa8
         inter_loss = feature_cont_loss + diversify_loss
         return inter_loss
 
