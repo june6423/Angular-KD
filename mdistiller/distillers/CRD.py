@@ -171,11 +171,29 @@ class CRD(Distiller):
                     beta = self.cfg.DKD.BETA,
                     temperature = self.cfg.DKD.T,
                 )
-            
-            
-            temp = loss_dict['ce_loss']
-            loss_dict["loss_ce"] = loss_ce + temp
-            loss_dict['loss_kd'] = loss_crd
+            else:
+                log_logits_student = F.log_softmax(logits_student/self.cfg.KD.TEMPERATURE, dim=1)
+                kd_loss = F.kl_div(log_logits_student, logits_teacher, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
+                loss_crd += kd_loss
+                
+            if "dot" in self.cfg.SOLVER.TRAINER:
+                temp_dict = loss_dict.copy()
+                loss_dict = {}
+                loss_dict["loss_ce"] = loss_ce + temp_dict["ce_loss"]
+                loss_dict["loss_kd"] = loss_crd
+                
+                for key in temp_dict:
+                    if key != "ce_loss":
+                        loss_dict["loss_kd"] += temp_dict[key]
+            else:
+                if "loss_ce" in loss_dict:
+                    loss_dict["loss_ce"] += loss_ce
+                else:
+                    loss_dict["loss_ce"] = loss_ce  
+                if "loss_kd" in loss_dict:
+                    loss_dict["loss_kd"] += loss_crd
+                else:
+                    loss_dict['loss_kd'] = loss_crd
             
             return logits_student, loss_dict
             
@@ -216,7 +234,8 @@ class CRD(Distiller):
                             temperature = self.cfg.DKD.T,
                         )
                     else:
-                        loss_dkd += self.ce_loss_weight * 0.8* (F.kl_div(p_s, logit_noise, size_average=False) * (self.cfg.TEKAP.T**2) / logits_student.shape[0])
+                        logit_noise = F.softmax(logit_noise/self.cfg.KD.TEMPERATURE, dim=1)
+                        loss_dkd += self.ce_loss_weight * 0.8* (F.kl_div(p_s, logit_noise, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0])
                 
             losses_dict = {
                 "loss_ce": loss_ce,

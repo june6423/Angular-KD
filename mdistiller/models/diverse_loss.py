@@ -78,10 +78,6 @@ class Feature_inter_Loss(nn.Module):
         else:
             diversify_loss = torch.tensor(0.0, device=sim_with_teacher.device)
         
-<<<<<<< HEAD
-=======
-        
->>>>>>> 398197a3ccbc45b2f6dfe5e9b68991bbd45a9fa8
         inter_loss = feature_cont_loss + diversify_loss
         return inter_loss
 
@@ -133,7 +129,7 @@ class Feature_intra_Loss(nn.Module):
 class Logit_inter_Loss(nn.Module):
     def __init__(self, T=4):
         super(Logit_inter_Loss, self).__init__()
-        self.margin = nn.Parameter(torch.tensor(0.1), requires_grad=True)
+        self.margin = nn.Parameter(torch.tensor(0.2), requires_grad=True)
         self.T = T
         self.temperature = 0.07
         

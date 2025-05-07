@@ -1,5 +1,5 @@
-from termios import CEOL
-from turtle import st
+# from termios import CEOL
+# from turtle import st
 import torch
 import torch.fft
 import torch.nn as nn
@@ -7,7 +7,6 @@ import torch.nn.functional as F
 import numpy as np
 
 from ._base import Distiller
-from .loss import CrossEntropyLabelSmooth
 
 def normalize(logit):
     mean = logit.mean(dim=-1, keepdims=True)

@@ -117,7 +117,6 @@ class ReviewKD(Distiller):
                 features_student["pooled_feat"].unsqueeze(-1).unsqueeze(-1)
             ]
         x = x[::-1]
-        x = x[:-1]
         results = []
         out_features, res_features = self.abfs[0](x[0], out_shape=self.out_shapes[0])
         results.append(out_features)

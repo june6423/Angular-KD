@@ -96,8 +96,8 @@ class TeacherEnsemble(nn.Module):
         
         self.feature_inter_loss = Feature_inter_Loss()
         self.feature_intra_loss = Feature_intra_Loss()
-        self.logit_inter_loss = Logit_inter_Loss()
-        self.logit_intra_loss = Logit_intra_Loss()
+        self.logit_inter_loss = Logit_inter_Loss(T=cfg.KD.TEMPERATURE)
+        self.logit_intra_loss = Logit_intra_Loss(T=cfg.KD.TEMPERATURE)
         
     def forward(self, x, loss = False, target = None, temp=4, various_temp = False):
         
