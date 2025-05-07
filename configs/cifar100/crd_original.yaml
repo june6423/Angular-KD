@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "CRD,res32x4,res8x4"
+  TAG: "margin0.1,CRD,res32x4,res8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD"
@@ -16,3 +16,10 @@ SOLVER:
   MOMENTUM: 0.9
   TYPE: "SGD"
   TRAINER: "crd" 
+DIV:
+  USAGE: True
+  AUGNUM : 5
+  FEAT_INTERWEIGHT : 0.1
+  FEAT_INTRAWEIGHT : 1.0
+  LOGIT_INTERWEIGHT : 1.0
+  LOGIT_INTRAWEIGHT : 1.0
