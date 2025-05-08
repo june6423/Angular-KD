@@ -132,9 +132,17 @@ class ReviewKD(Distiller):
         loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
         
         log_logits_student = F.log_softmax(logits_student/self.cfg.KD.TEMPERATURE, dim=1)
-        kd_loss = F.kl_div(log_logits_student, logits_teacher, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
+        if self.cfg.DIV.USAGE:
+            kd_loss = F.kl_div(log_logits_student, logits_teacher, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
+        else:
+            kd_loss = F.kl_div(log_logits_student, F.softmax(logits_teacher/self.cfg.KD.TEMPERATURE,dim=1), size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
         
         if self.cfg.TEKAP.USAGE:
+            for i in range(self.cfg.TEKAP.AUGNUM+1):
+                logits_teacher_clone = randomize(logits_teacher)
+                logits_teacher_clone = F.softmax(logits_teacher_clone/self.cfg.KD.TEMPERATURE, dim=1)
+                kd_loss += 0.8 * F.kl_div(log_logits_student, logits_teacher_clone, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
+            
             loss_reviewkd = (
                 self.reviewkd_loss_weight
                 * min(kwargs["epoch"] / self.warmup_epochs, 1.0)
