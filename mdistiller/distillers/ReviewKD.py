@@ -131,6 +131,9 @@ class ReviewKD(Distiller):
         # losses
         loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)
         
+        log_logits_student = F.log_softmax(logits_student/self.cfg.KD.TEMPERATURE, dim=1)
+        kd_loss = F.kl_div(log_logits_student, logits_teacher, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
+        
         if self.cfg.TEKAP.USAGE:
             loss_reviewkd = (
                 self.reviewkd_loss_weight
@@ -150,7 +153,7 @@ class ReviewKD(Distiller):
         
         losses_dict = {
             "loss_ce": loss_ce,
-            "loss_kd": loss_reviewkd,
+            "loss_kd": loss_reviewkd + kd_loss,
         }
         return logits_student, losses_dict
 

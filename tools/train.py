@@ -69,7 +69,7 @@ def main(cfg, resume, opts):
                 num_classes=num_classes
             )
         
-        if "CRD" in cfg.DISTILLER.TYPE:    
+        if "CRD" in cfg.DISTILLER.TYPE or cfg.DIV.USAGE:    
             if cfg.DATASET.TYPE == "imagenet":
                 h = 224
             else:
