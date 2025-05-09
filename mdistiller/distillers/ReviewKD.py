@@ -150,10 +150,7 @@ class ReviewKD(Distiller):
             )
             
             for i in range(self.cfg.TEKAP.AUGNUM+1):
-                features_teacher_clone ={}
-                for k, v in features_teacher.items():
-                    features_teacher_clone[k] = randomize(v)
-                    
+                features_teacher_clone = [ randomize(x) for x in features_teacher ]                  
                 loss_reviewkd += 0.8 * (
                     self.reviewkd_loss_weight
                     * min(kwargs["epoch"] / self.warmup_epochs, 1.0)
