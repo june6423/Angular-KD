@@ -29,8 +29,8 @@ class View_Generator(torch.nn.Module):
             nn.init.constant_(self.classifiers[i].bias, 0)
         
         for bn in range(number_of_view):
-            nn.init.constant_(self.batch_norm[bn].weight, torch.normal(mean=batch_norm_mean[i], std=batch_norm_std[i], size=(1,)).item())
-            nn.init.constant_(self.batch_norm[bn].bias, torch.normal(mean=batch_norm_mean[i], std=batch_norm_std[i], size=(1,)).item())
+            nn.init.constant_(self.batch_norm[bn].weight, torch.normal(mean=batch_norm_mean[bn], std=batch_norm_std[bn], size=(1,)).item())
+            nn.init.constant_(self.batch_norm[bn].bias, torch.normal(mean=batch_norm_mean[bn], std=batch_norm_std[bn], size=(1,)).item())
 
         ## Initialize the weights
         A = torch.randn(teacher_channel, teacher_channel, number_of_view) # [128, 128, 3]
