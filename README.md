@@ -1,4 +1,4 @@
-This repo is official implementation of Angular-KD (Single-Teacher View Augmentation: Boosting Knowledge Distillation via Angular Diversity)
+### Single-Teacher View Augmentation: Boosting Knowledge Distillation via Angular Diversity
 
 ### Installation
 
@@ -48,10 +48,11 @@ sudo python3 setup.py develop
 
   ```bash
   # for instance, our DKD method.
-  python3 tools/train.py --cfg configs/cifar100/dkd/res32x4_res8x4.yaml
+  
+  python3 tools/train.py --cfg configs/cifar100/crd_ours.yaml
 
   # you can also change settings at command line
-  python3 tools/train.py --cfg configs/cifar100/dkd/res32x4_res8x4.yaml SOLVER.BATCH_SIZE 128 SOLVER.LR 0.1
+  python3 tools/train.py --cfg configs/cifar100/crd_ours.yaml SOLVER.BATCH_SIZE 128 SOLVER.LR 0.1
   ```
 
 3. Training on ImageNet
@@ -60,73 +61,11 @@ sudo python3 setup.py develop
 
   ```bash
   # for instance, our DKD method.
-  python3 tools/train.py --cfg configs/imagenet/r34_r18/dkd.yaml
+  python3 tools/train.py --cfg configs/imagenet/r34_r18/crd.yaml
   ```
 
-4. Training on MS-COCO
 
-- see [detection.md](detection/README.md)
-
-
-5. Extension: Visualizations
-
-- Jupyter notebooks: [tsne](tools/visualizations/tsne.ipynb) and [correlation_matrices](tools/visualizations/correlation.ipynb)
-
-
-### Custom Distillation Method
-
-1. create a python file at `mdistiller/distillers/` and define the distiller
-  
-  ```python
-  from ._base import Distiller
-
-  class MyDistiller(Distiller):
-      def __init__(self, student, teacher, cfg):
-          super(MyDistiller, self).__init__(student, teacher)
-          self.hyper1 = cfg.MyDistiller.hyper1
-          ...
-
-      def forward_train(self, image, target, **kwargs):
-          # return the output logits and a Dict of losses
-          ...
-      # rewrite the get_learnable_parameters function if there are more nn modules for distillation.
-      # rewrite the get_extra_parameters if you want to obtain the extra cost.
-    ...
-  ```
-
-2. regist the distiller in `distiller_dict` at `mdistiller/distillers/__init__.py`
-
-3. regist the corresponding hyper-parameters at `mdistiller/engines/cfg.py`
-
-4. create a new config file and test it.
-
-# Citation
-
-If this repo is helpful for your research, please consider citing the paper:
-
-```BibTeX
-@article{zhao2022dkd,
-  title={Decoupled Knowledge Distillation},
-  author={Zhao, Borui and Cui, Quan and Song, Renjie and Qiu, Yiyu and Liang, Jiajun},
-  journal={arXiv preprint arXiv:2203.08679},
-  year={2022}
-}
-@article{zhao2023dot,
-  title={DOT: A Distillation-Oriented Trainer},
-  author={Zhao, Borui and Cui, Quan and Song, Renjie and Liang, Jiajun},
-  journal={arXiv preprint arXiv:2307.08436},
-  year={2023}
-}
-```
-
-# License
-
-MDistiller is released under the MIT license. See [LICENSE](LICENSE) for details.
 
 # Acknowledgement
 
-- Thanks for CRD and ReviewKD. We build this library based on the [CRD's codebase](https://github.com/HobbitLong/RepDistiller) and the [ReviewKD's codebase](https://github.com/dvlab-research/ReviewKD).
-
-- Thanks Yiyu Qiu and Yi Shi for the code contribution during their internship in MEGVII Technology.
-
-- Thanks Xin Jin for the discussion about DKD.
+- Thanks for mdistiller, CRD, MLKD and Review KD. This code is built on [mdistiller](https://github.com/megvii-research/mdistiller), [Multi-Level-logit-Distillation](https://github.com/Jin-Ying/Multi-Level-Logit-Distillation), [CRD](https://github.com/HobbitLong/RepDistiller) and [ReviewKD](https://github.com/dvlab-research/ReviewKD).
