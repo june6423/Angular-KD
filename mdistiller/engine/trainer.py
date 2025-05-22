@@ -103,6 +103,9 @@ class BaseTrainer(object):
 
         # train loops
         self.distiller.train()
+        if self.cfg.DIV.USAGE:
+            self.distiller.module.teacher.view_generator.train()
+            
         for idx, data in enumerate(self.train_loader):
             msg = self.train_iter(data, epoch, train_meters)
             pbar.set_description(log_msg(msg, "TRAIN"))
