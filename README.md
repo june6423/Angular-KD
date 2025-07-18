@@ -35,10 +35,10 @@ sudo python3 setup.py develop
 
   ```bash
   # for instance, our Angular-KD method
-  python3 tools/train.py --cfg configs/cifar100/crd_ours.yaml
+  CUDA_VISIBLE_DEVICES=0 python3 tools/train.py --cfg configs/cifar100/crd_ours.yaml
 
   # you can also change settings at command line
-  python3 tools/train.py --cfg configs/cifar100/crd_ours.yaml SOLVER.BATCH_SIZE 128 SOLVER.LR 0.1
+  CUDA_VISIBLE_DEVICES=0 python3 tools/train.py --cfg configs/cifar100/crd_ours.yaml SOLVER.BATCH_SIZE 128 SOLVER.LR 0.1
   ```
 
 3. Training on ImageNet
@@ -47,7 +47,7 @@ sudo python3 setup.py develop
 
   ```bash
   # for instance, our Angular-KD method.
-  python3 tools/train.py --cfg configs/imagenet/r34_r18/crd.yaml
+  CUDA_VISIBLE_DEVICES=0 python3 tools/train.py --cfg configs/imagenet/r34_r18/crd.yaml
   ```
 
 
