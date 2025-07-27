@@ -29,8 +29,8 @@ class View_Generator(torch.nn.Module):
             nn.init.constant_(self.classifiers[i].bias, 0)
         
         for bn in range(number_of_view):
-            nn.init.constant_(self.batch_norm[bn].weight, torch.normal(mean=batch_norm_mean[i], std=batch_norm_std[i], size=(1,)).item())
-            nn.init.constant_(self.batch_norm[bn].bias, torch.normal(mean=batch_norm_mean[i], std=batch_norm_std[i], size=(1,)).item())
+            nn.init.constant_(self.batch_norm[bn].weight, torch.normal(mean=batch_norm_mean[bn], std=batch_norm_std[bn], size=(1,)).item())
+            nn.init.constant_(self.batch_norm[bn].bias, torch.normal(mean=batch_norm_mean[bn], std=batch_norm_std[bn], size=(1,)).item())
 
         ## Initialize the weights
         A = torch.randn(teacher_channel, teacher_channel, number_of_view) # [128, 128, 3]
@@ -54,30 +54,30 @@ class View_Generator(torch.nn.Module):
 
 
 def weight_sum_logit(logit_t, view_list, temp=4):
-    
-    weight = [0.8] * len(view_list)
+    view_list_clone = view_list.copy()
+    weight = [0.8] * len(view_list_clone)
     weight.append(1.0)
     weight = torch.tensor(weight).cuda()
     weight = weight.view(1, -1, 1)
     weight = F.normalize(weight, p=2, dim=1)        
     
-    view_list.append(logit_t)
-    logit_tensor = torch.stack(view_list, dim=1) # [B, N, D]
+    view_list_clone.append(logit_t)
+    logit_tensor = torch.stack(view_list_clone, dim=1) # [B, N, D]
     logit_tensor = F.softmax(logit_tensor/temp, dim=2) # [B, N, D]
     logit_tensor = torch.sum(logit_tensor * weight, dim=1) # [B, D]
     return logit_tensor
 
 
 def weight_sum_feature(feat_t, view_list):
-    
-    weight = [0.8] * len(view_list)
+    view_list_clone = view_list.copy()
+    weight = [0.8] * len(view_list_clone)
     weight.append(1.0)
     weight = torch.tensor(weight).cuda()
     weight = weight.view(1, -1, 1)
     weight = nn.functional.normalize(weight, p=2, dim=1)
 
-    view_list.append(feat_t)
-    feat_tensor = torch.stack(view_list, dim=1) # [B, N, D]
+    view_list_clone.append(feat_t)
+    feat_tensor = torch.stack(view_list_clone, dim=1) # [B, N, D]
     feat_tensor = torch.sum(feat_tensor * weight, dim=1) # [B, D]
     return feat_tensor
    
@@ -88,6 +88,7 @@ class TeacherEnsemble(nn.Module):
         self.cfg = cfg
         self.teacher_channel = cfg.CRD.FEAT.TEACHER_DIM
         self.original_teacher = original_teacher
+        self.original_teacher.eval()
         self.number_of_view = cfg.DIV.AUGNUM
         self.num_classes = num_classes
         self.dropout_prob = dropout_prob
@@ -105,15 +106,16 @@ class TeacherEnsemble(nn.Module):
         
         loss_dict = {}
         
-        with torch.no_grad():
-            logit_t, feat_t = self.original_teacher(x)
+        #with torch.no_grad():
+        self.original_teacher.eval()
+        logit_t, feat_t = self.original_teacher(x)
         
-        pooled_feat_grad_on = feat_t["pooled_feat"].detach().requires_grad_()
+        #pooled_feat_grad_on = feat_t["pooled_feat"].detach().requires_grad_()
+        pooled_feat_grad_on = feat_t["pooled_feat"].clone()
         
         assert pooled_feat_grad_on.dim() == 2
-
-        view_logit_list, view_feature_list = self.view_generator(pooled_feat_grad_on)
         
+        view_logit_list, view_feature_list = self.view_generator(pooled_feat_grad_on)
         
         loss_dict["feature_inter_loss"] = self.cfg.DIV.FEAT_INTERWEIGHT * self.feature_inter_loss(feat_t["pooled_feat"], view_feature_list)
         loss_dict["feature_intra_loss"] = self.cfg.DIV.FEAT_INTRAWEIGHT * self.feature_intra_loss(feat_t["pooled_feat"], view_feature_list)
@@ -138,4 +140,6 @@ class TeacherEnsemble(nn.Module):
         
         if loss:
             return logit_tensor, feat_t, loss_dict
-        return logit_tensor, feat_t
+        
+        del loss_dict
+        return logit_tensor, view_logit_list

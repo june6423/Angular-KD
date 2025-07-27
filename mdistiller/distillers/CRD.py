@@ -4,6 +4,29 @@ import torch.nn.functional as F
 import math
 
 from ._base import Distiller
+import torchvision.transforms as T
+
+
+teacher_augmentation = T.Compose([
+    T.RandomHorizontalFlip(p=0.5),
+    T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+    T.RandomRotation(degrees=10),
+])
+
+
+def weight_sum_logit(logit_t, view_list, temp=4):
+    view_list_clone = view_list.copy()
+    weight = [0.8] * len(view_list_clone)
+    weight.append(1.0)
+    weight = torch.tensor(weight).cuda()
+    weight = weight.view(1, -1, 1)
+    weight = F.normalize(weight, p=1, dim=1)        
+    
+    view_list_clone.append(logit_t)
+    logit_tensor = torch.stack(view_list_clone, dim=1) # [B, N, D]
+    logit_tensor = F.softmax(logit_tensor/temp, dim=2) # [B, N, D]
+    logit_tensor = torch.sum(logit_tensor * weight, dim=1) # [B, D]
+    return logit_tensor
 
 
 def randomize(x):
@@ -127,6 +150,7 @@ class CRD(Distiller):
             super().get_learnable_parameters()
             + list(self.embed_s.parameters())
             + list(self.embed_t.parameters())
+            + list(self.teacher.view_generator.parameters())
         )
 
     def get_extra_parameters(self):
@@ -147,12 +171,13 @@ class CRD(Distiller):
         s_loss = self.criterion_s(out_s)
         t_loss = self.criterion_t(out_t)
         return s_loss + t_loss
-
+        
     def forward_train(self, image, target, index, contrastive_index, **kwargs):
         logits_student, feature_student = self.student(image)
         
         if self.cfg.DIV.USAGE:
-            logits_teacher, feature_teacher, loss_dict = self.teacher(image, loss=True, target=target)
+            image_for_teacher = teacher_augmentation(image.clone())
+            logits_teacher, feature_teacher, loss_dict = self.teacher(image_for_teacher, loss=True, target=target)
             
             loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)         
             loss_crd = self.feat_loss_weight * self.crd_loss(
@@ -163,7 +188,7 @@ class CRD(Distiller):
             )
             
             if self.cfg.DIV.DKD:
-                loss_crd +=  1 * min(kwargs["epoch"] /20, 1.0) * dkd_loss(
+                loss_crd +=  0.3 * min(kwargs["epoch"] /20, 1.0) * dkd_loss(
                     logits_student,
                     logits_teacher,
                     target,
@@ -171,10 +196,10 @@ class CRD(Distiller):
                     beta = self.cfg.DKD.BETA,
                     temperature = self.cfg.DKD.T,
                 )
-            else:
-                log_logits_student = F.log_softmax(logits_student/self.cfg.KD.TEMPERATURE, dim=1)
-                kd_loss = F.kl_div(log_logits_student, logits_teacher, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
-                loss_crd += kd_loss
+                
+            log_logits_student = F.log_softmax(logits_student/self.cfg.KD.TEMPERATURE, dim=1)
+            kd_loss = F.kl_div(log_logits_student, logits_teacher, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0]
+            #loss_crd += kd_loss
                 
             if "dot" in self.cfg.SOLVER.TRAINER:
                 temp_dict = loss_dict.copy()
@@ -186,15 +211,17 @@ class CRD(Distiller):
                     if key != "ce_loss":
                         loss_dict["loss_kd"] += temp_dict[key]
             else:
-                if "loss_ce" in loss_dict:
-                    loss_dict["loss_ce"] += loss_ce
-                else:
-                    loss_dict["loss_ce"] = loss_ce  
-                if "loss_kd" in loss_dict:
-                    loss_dict["loss_kd"] += loss_crd
-                else:
-                    loss_dict['loss_kd'] = loss_crd
-            
+                loss_dict['loss_student_target'] = loss_ce
+                loss_dict['loss_student_teacher_logit'] = kd_loss
+                loss_dict['loss_student_teacher_feat'] = loss_crd
+                # if "loss_ce" in loss_dict:
+                #     loss_dict["loss_ce"] += loss_ce
+                # else:
+                #     loss_dict["loss_ce"] = loss_ce  
+                # if "loss_kd" in loss_dict:
+                #     loss_dict["loss_kd"] += loss_crd
+                # else:
+                #     loss_dict['loss_kd'] = loss_crd
             return logits_student, loss_dict
             
         elif self.cfg.TEKAP.USAGE:
@@ -206,9 +233,10 @@ class CRD(Distiller):
                 index,
                 contrastive_index,
             )
-            loss_dkd = 0.0
             
             p_s = F.log_softmax(logits_student/self.cfg.TEKAP.T, dim=1)
+            logits_teacher_softmax = F.softmax(logits_teacher/self.cfg.TEKAP.T, dim=1)
+            loss_kd = self.ce_loss_weight * (F.kl_div(p_s, logits_teacher_softmax, size_average=False) * (self.cfg.TEKAP.T**2) / logits_student.shape[0])
             
             for i in range(self.cfg.TEKAP.AUGNUM):
                 if self.cfg.TEKAP.FEAT:
@@ -225,7 +253,7 @@ class CRD(Distiller):
                     logit_noise = randomize(logits_teacher)
                     
                     if self.cfg.TEKAP.DKD:
-                        loss_dkd += min(kwargs["epoch"] /20, 1.0) * dkd_loss_tekap(
+                        loss_kd += min(kwargs["epoch"] /20, 1.0) * dkd_loss_tekap(
                             logits_student,
                             logit_noise,
                             target,
@@ -235,11 +263,22 @@ class CRD(Distiller):
                         )
                     else:
                         logit_noise = F.softmax(logit_noise/self.cfg.KD.TEMPERATURE, dim=1)
-                        loss_dkd += self.ce_loss_weight * 0.8* (F.kl_div(p_s, logit_noise, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0])
-                
+                        loss_kd += self.ce_loss_weight * 0.8* (F.kl_div(p_s, logit_noise, size_average=False) * (self.cfg.KD.TEMPERATURE**2) / logits_student.shape[0])
+            
+            logit_list = []
+            for i in range(self.cfg.TEKAP.AUGNUM):
+                logit_list.append(randomize(logits_teacher))
+            ensemble_logit = weight_sum_logit(logits_teacher, logit_list)
+            
+            
+            loss_ensemble = F.cross_entropy(ensemble_logit, target)
+            
             losses_dict = {
-                "loss_ce": loss_ce,
-                "loss_kd": loss_crd + loss_dkd,
+                #"ce_loss": loss_ensemble,
+                'loss_student_target' : loss_ce,
+                'loss_student_teacher_logit' : loss_kd,
+                'loss_student_teacher_feat' : loss_crd
+                #"loss_kd": loss_crd + loss_dkd,
             }
             return logits_student, losses_dict                      
         

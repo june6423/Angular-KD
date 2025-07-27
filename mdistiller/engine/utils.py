@@ -5,7 +5,7 @@ import numpy as np
 import sys
 import time
 from tqdm import tqdm
-
+import torch.nn.functional as F
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -26,6 +26,89 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
+def randomize(x):
+    x_noise = x.clone()
+    noise = torch.randn_like(x_noise)
+    x_noise = 0.9 * x_noise + 0.1 * noise
+    return x_noise
+
+
+def weight_sum_logit(logit_t, view_list, temp=4):
+    view_list_clone = view_list.copy()
+    weight = [0.8] * len(view_list_clone)
+    weight.append(1.0)
+    weight = torch.tensor(weight).cuda()
+    weight = weight.view(1, -1, 1)
+    weight = F.normalize(weight, p=2, dim=1)        
+    
+    view_list_clone.append(logit_t)
+    logit_tensor = torch.stack(view_list_clone, dim=1) # [B, N, D]
+    logit_tensor = F.softmax(logit_tensor/temp, dim=2) # [B, N, D]
+    logit_tensor = torch.sum(logit_tensor * weight, dim=1) # [B, D]
+    return logit_tensor
+
+
+def validate_view(val_loader, distiller):
+    batch_time, teacher_acc = [AverageMeter() for _ in range(2)]
+    view_acc = [AverageMeter() for _ in range(5)]
+
+    distiller.eval()
+    with torch.no_grad():
+        start_time = time.time()
+        for idx, (image, target) in enumerate(val_loader):
+            image = image.float()
+            image = image.cuda(non_blocking=True)
+            target = target.cuda(non_blocking=True)
+            
+            teacher_output, view_logit_list = distiller.module.teacher(image)
+            #view_list = [F.softmax(view, dim=1) for view in view_logit_list]
+                        
+            acc1 = accuracy(teacher_output, target, topk=(1,))
+            batch_size = image.size(0)
+            teacher_acc.update(acc1[0], batch_size)
+            
+            for idx in range(len(view_logit_list)):
+                accuracy_view = accuracy(view_logit_list[idx], target, topk=(1,))
+                view_acc[idx].update(accuracy_view[0], batch_size)
+            
+            # measure elapsed time
+            batch_time.update(time.time() - start_time)
+            start_time = time.time()
+        view_avg = [view.avg for view in view_acc]
+    return teacher_acc.avg, view_avg
+
+
+def validate_view_tekap(val_loader, distiller):
+    batch_time, teacher_acc = [AverageMeter() for _ in range(2)]
+    view_acc = [AverageMeter() for _ in range(5)]
+
+    distiller.eval()
+    with torch.no_grad():
+        start_time = time.time()
+        for idx, (image, target) in enumerate(val_loader):
+            image = image.float()
+            image = image.cuda(non_blocking=True)
+            target = target.cuda(non_blocking=True)
+            teacher_output, _ = distiller.module.teacher(image)
+            view_logit_list = [randomize(teacher_output) for _ in range(3)]
+            ensemble_output = weight_sum_logit(teacher_output, view_logit_list)
+            
+            acc1 = accuracy(ensemble_output, target, topk=(1,))
+            batch_size = image.size(0)
+            teacher_acc.update(acc1[0], batch_size)
+            
+            #view_logit_list = [F.softmax(view, dim=1) for view in view_logit_list]
+            for idx in range(len(view_logit_list)):
+                accuracy_view = accuracy(view_logit_list[idx], target, topk=(1,))
+                view_acc[idx].update(accuracy_view[0], batch_size)
+            
+            # measure elapsed time
+            batch_time.update(time.time() - start_time)
+            start_time = time.time()
+        view_avg = [view.avg for view in view_acc]
+    return teacher_acc.avg, view_avg
+
+
 def validate(val_loader, distiller):
     batch_time, losses, top1, top5 = [AverageMeter() for _ in range(4)]
     criterion = nn.CrossEntropyLoss()
@@ -41,6 +124,8 @@ def validate(val_loader, distiller):
             target = target.cuda(non_blocking=True)
             output = distiller(image=image)
             loss = criterion(output, target)
+            #log_prob = torch.log(output + 1e-8)
+            #loss = F.nll_loss(log_prob, target)
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
             batch_size = image.size(0)
             losses.update(loss.cpu().detach().numpy().mean(), batch_size)
