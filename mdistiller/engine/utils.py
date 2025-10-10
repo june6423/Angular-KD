@@ -48,67 +48,6 @@ def weight_sum_logit(logit_t, view_list, temp=4):
     return logit_tensor
 
 
-def validate_view(val_loader, distiller):
-    batch_time, teacher_acc = [AverageMeter() for _ in range(2)]
-    view_acc = [AverageMeter() for _ in range(5)]
-
-    distiller.eval()
-    with torch.no_grad():
-        start_time = time.time()
-        for idx, (image, target) in enumerate(val_loader):
-            image = image.float()
-            image = image.cuda(non_blocking=True)
-            target = target.cuda(non_blocking=True)
-            
-            teacher_output, view_logit_list = distiller.module.teacher(image)
-            #view_list = [F.softmax(view, dim=1) for view in view_logit_list]
-                        
-            acc1 = accuracy(teacher_output, target, topk=(1,))
-            batch_size = image.size(0)
-            teacher_acc.update(acc1[0], batch_size)
-            
-            for idx in range(len(view_logit_list)):
-                accuracy_view = accuracy(view_logit_list[idx], target, topk=(1,))
-                view_acc[idx].update(accuracy_view[0], batch_size)
-            
-            # measure elapsed time
-            batch_time.update(time.time() - start_time)
-            start_time = time.time()
-        view_avg = [view.avg for view in view_acc]
-    return teacher_acc.avg, view_avg
-
-
-def validate_view_tekap(val_loader, distiller):
-    batch_time, teacher_acc = [AverageMeter() for _ in range(2)]
-    view_acc = [AverageMeter() for _ in range(5)]
-
-    distiller.eval()
-    with torch.no_grad():
-        start_time = time.time()
-        for idx, (image, target) in enumerate(val_loader):
-            image = image.float()
-            image = image.cuda(non_blocking=True)
-            target = target.cuda(non_blocking=True)
-            teacher_output, _ = distiller.module.teacher(image)
-            view_logit_list = [randomize(teacher_output) for _ in range(3)]
-            ensemble_output = weight_sum_logit(teacher_output, view_logit_list)
-            
-            acc1 = accuracy(ensemble_output, target, topk=(1,))
-            batch_size = image.size(0)
-            teacher_acc.update(acc1[0], batch_size)
-            
-            #view_logit_list = [F.softmax(view, dim=1) for view in view_logit_list]
-            for idx in range(len(view_logit_list)):
-                accuracy_view = accuracy(view_logit_list[idx], target, topk=(1,))
-                view_acc[idx].update(accuracy_view[0], batch_size)
-            
-            # measure elapsed time
-            batch_time.update(time.time() - start_time)
-            start_time = time.time()
-        view_avg = [view.avg for view in view_acc]
-    return teacher_acc.avg, view_avg
-
-
 def validate(val_loader, distiller):
     batch_time, losses, top1, top5 = [AverageMeter() for _ in range(4)]
     criterion = nn.CrossEntropyLoss()
@@ -186,3 +125,4 @@ def save_checkpoint(obj, path):
 def load_checkpoint(path):
     with open(path, "rb") as f:
         return torch.load(f, map_location="cpu")
+

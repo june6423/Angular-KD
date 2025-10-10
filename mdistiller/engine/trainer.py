@@ -11,69 +11,12 @@ from .utils import (
     AverageMeter,
     accuracy,
     validate,
-    validate_view,
-    validate_view_tekap,
     adjust_learning_rate,
     save_checkpoint,
     load_checkpoint,
     log_msg,
 )
 from .dot import DistillationOrientedTrainer
-
-
-def check_model_gradients(model_instance, prefix=""):
-    """
-    주어진 모델 인스턴스 내의 모든 파라미터에 대해 requires_grad 상태와
-    역전파 후 grad (기울기) 값을 확인합니다.
-    """
-    print(f"\n--- Checking Gradients for Model/Module: {prefix or model_instance.__class__.__name__} ---")
-
-    has_trainable_params = False
-    has_grad_values = False
-    has_none_grads = False
-    has_all_zeros_grads = False
-
-    for name, param in model_instance.named_parameters():
-        full_param_name = f"{prefix}.{name}" if prefix else name
-        
-        # 1. requires_grad 상태 확인
-        if param.requires_grad:
-            has_trainable_params = True
-            
-            # 2. grad 값 확인 (loss.backward() 호출 후)
-            if param.grad is not None:
-                has_grad_values = True
-                grad_mean_abs = param.grad.abs().mean().item()
-                grad_max_abs = param.grad.abs().max().item()
-                
-                # 모든 기울기가 0인지 확인 (Vanishing Gradient의 강력한 신호)
-                if (param.grad == 0).all():
-                    has_all_zeros_grads = True
-                    print(f"  [WARN] Parameter: {full_param_name}, requires_grad=True, GRAD IS ALL ZEROS! (Mean Abs: {grad_mean_abs:.8f}, Max Abs: {grad_max_abs:.8f})")
-                elif grad_mean_abs < 1e-8 and grad_max_abs < 1e-6: # 매우 작은 기울기
-                     print(f"  [WARN] Parameter: {full_param_name}, requires_grad=True, GRAD IS VERY SMALL! (Mean Abs: {grad_mean_abs:.8f}, Max Abs: {grad_max_abs:.8f})")
-                else:
-                    print(f"  [INFO] Parameter: {full_param_name}, requires_grad=True, Grad (Mean Abs: {grad_mean_abs:.8f}, Max Abs: {grad_max_abs:.8f})")
-            else:
-                has_none_grads = True
-                print(f"  [ERROR] Parameter: {full_param_name}, requires_grad=True, GRAD IS NONE! (Gradient flow broken?)")
-        else:
-            # requires_grad가 False인 파라미터는 기울기가 계산되지 않으므로 grad=None이 정상
-            if param.grad is None:
-                print(f"  [INFO] Parameter: {full_param_name}, requires_grad=False (Expected grad=None)")
-            else:
-                # requires_grad가 False인데 grad가 None이 아니라면 비정상
-                print(f"  [WARN] Parameter: {full_param_name}, requires_grad=False, BUT GRAD IS NOT NONE! (Might be leftover from previous run or anomaly)")
-
-    if not has_trainable_params:
-        print("  No trainable parameters found in this module.")
-    if has_none_grads:
-        print("\n  >>> SUMMARY: Some trainable parameters had None gradients! Check computational graph and detach() calls. <<<")
-    if has_all_zeros_grads:
-        print("\n  >>> SUMMARY: Some trainable parameters had all-zero gradients! Check for dead ReLUs or vanishing gradients. <<<")
-    if not has_grad_values and has_trainable_params:
-        print("\n  >>> SUMMARY: No gradient values found for trainable parameters! Something is critically wrong. <<<")
-    print("--------------------------------------------------")
 
 class BaseTrainer(object):
     def __init__(self, experiment_name, distiller, train_loader, val_loader, cfg):
@@ -153,12 +96,6 @@ class BaseTrainer(object):
             "training_time": AverageMeter(),
             "data_time": AverageMeter(),
             "losses": AverageMeter(),
-            "loss_student_target": AverageMeter(),
-            "loss_student_teacher_logit": AverageMeter(),
-            "loss_student_teacher_feat": AverageMeter(),
-            "loss_student_total": AverageMeter(),
-            'loss_teacher_target': AverageMeter(),
-            "loss_ensemble" : AverageMeter(),
             "top1": AverageMeter(),
             "top5": AverageMeter(),
         }
@@ -189,48 +126,6 @@ class BaseTrainer(object):
                 "test_loss": test_loss,
             }
         )
-        
-        if self.cfg.DIV.USAGE:
-            teacher_acc, view_acc_list = validate_view(self.val_loader, self.distiller)
-            print("View ACC ",view_acc_list)
-            metric = {}
-            for k in train_meters.keys():
-                metric[k] = train_meters[k].avg                
-            print("Loss", metric)
-            
-            log_dict['teacher_acc'] = teacher_acc
-            log_dict['view1_acc'] = view_acc_list[0]
-            log_dict['view2_acc'] = view_acc_list[1]
-            log_dict['view3_acc'] = view_acc_list[2]
-            log_dict['view4_acc'] = view_acc_list[3]
-            log_dict['view5_acc'] = view_acc_list[4]
-            
-            log_dict["loss_student_target"] = train_meters["loss_student_target"].avg
-            log_dict["loss_student_teacher_logit"] = train_meters["loss_student_teacher_logit"].avg
-            log_dict["loss_student_teacher_feat"] = train_meters["loss_student_teacher_feat"].avg
-            log_dict["loss_student_total"] = train_meters["loss_student_total"].avg
-            log_dict["loss_teacher_target"] = train_meters['loss_teacher_target'].avg
-            log_dict['loss_ensemble'] = train_meters['loss_ensemble'].avg
-            
-        # if self.cfg.TEKAP.USAGE:
-        #     teacher_acc, view_acc_list = validate_view_tekap(self.val_loader, self.distiller)
-        #     print("View ACC ",view_acc_list)
-        #     for k in train_meters.keys():
-        #         metric[k] = train_meters[k].avg                
-        #     print("Loss", metric)
-            
-        #     log_dict['teacher_acc'] = teacher_acc
-        #     log_dict['view1_acc'] = view_acc_list[0]
-        #     log_dict['view2_acc'] = view_acc_list[1]
-        #     log_dict['view3_acc'] = view_acc_list[2]
-        #     log_dict['view4_acc'] = view_acc_list[3]
-        #     log_dict['view5_acc'] = view_acc_list[4]
-            
-        #     log_dict["loss_student_target"] = train_meters["loss_student_target"].avg
-        #     log_dict["loss_student_teacher_logit"] = train_meters["loss_student_teacher_logit"].avg
-        #     log_dict["loss_student_teacher_feat"] = train_meters["loss_student_teacher_feat"].avg
-        #     log_dict["loss_student_total"] = train_meters["loss_student_total"].avg
-        #     log_dict["loss_teacher_target"] = train_meters['loss_teacher_target'].avg
             
         self.log(lr, epoch, log_dict)
         # saving checkpoint
@@ -321,21 +216,6 @@ class CRDTrainer(BaseTrainer):
         train_meters["training_time"].update(time.time() - train_start_time)
         # collect info
         batch_size = image.size(0)
-        
-        train_meters['loss_teacher_target'].update(losses_dict['ce_loss'].cpu().detach().numpy().mean(), batch_size)
-        train_meters['loss_student_target'].update(losses_dict['loss_student_target'].cpu().detach().numpy().mean(), batch_size)
-        train_meters['loss_student_teacher_logit'].update(losses_dict['loss_student_teacher_logit'].cpu().detach().numpy().mean(), batch_size)
-        train_meters['loss_student_teacher_feat'].update(losses_dict['loss_student_teacher_feat'].cpu().detach().numpy().mean(), batch_size)
-        
-        student_loss = sum([losses_dict['loss_student_target'].mean(),  losses_dict['loss_student_teacher_logit'].mean(),losses_dict['loss_student_teacher_feat'].mean()])
-        train_meters['loss_student_total'].update(student_loss.cpu().detach().numpy().mean(), batch_size)
-        
-        feat_inter_loss = losses_dict['feature_inter_loss'].mean()
-        feat_intra_loss = losses_dict['feature_intra_loss'].mean()
-        logit_inter_loss = losses_dict['logit_inter_loss'].mean()
-        logit_intra_loss = losses_dict['logit_intra_loss'].mean()
-        
-        train_meters['loss_ensemble'].update(sum([feat_inter_loss, feat_intra_loss, logit_inter_loss, logit_intra_loss]))
         
         acc1, acc5 = accuracy(preds, target, topk=(1, 5))
         train_meters["losses"].update(loss.cpu().detach().numpy().mean(), batch_size)

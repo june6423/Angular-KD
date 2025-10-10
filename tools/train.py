@@ -92,7 +92,7 @@ def main(cfg, resume, opts):
                 pretrain_model_path is not None
             ), "no pretrain model for teacher {}".format(cfg.DISTILLER.TEACHER)
             model_teacher = net(num_classes=num_classes)
-            model_teacher.load_state_dict(load_checkpoint(pretrain_model_path)["model"])
+            model_teacher.load_state_dict(load_checkpoint(pretrain_model_path)["model"], strict=False)
             model_student = model_dict[cfg.DISTILLER.STUDENT][0](
                 num_classes=num_classes
             )
@@ -119,7 +119,7 @@ def main(cfg, resume, opts):
             if cfg.DIV.USAGE:
                 model_teacher = TeacherEnsemble(cfg, model_teacher, num_classes=num_classes)
                 #model_teacher.load_state_dict(load_checkpoint("output/resnet32.pth")["model"])
-                model_teacher.load_state_dict(load_checkpoint("output/vgg13_latest.pth")["model"])
+                #model_teacher.load_state_dict(load_checkpoint("output/vgg13_latest.pth")["model"])
                 
             
         if "CRD" in cfg.DISTILLER.TYPE:           
