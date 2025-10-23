@@ -1,9 +1,9 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "MLKD,res32x4,vgg8"
+  TAG: "Angular-KD,MLKD,res32x4,vgg8"
   PROJECT: "cifar100_baselines_ori"
 DISTILLER:
-  TYPE: "MLKD"
+  TYPE: "CRD_mlkd"
   TEACHER: "resnet32x4"
   STUDENT: "vgg8"
 SOLVER:
@@ -15,9 +15,15 @@ SOLVER:
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "ours"
-
-
+  TRAINER: "crd_aug" 
+DIV:
+  USAGE: True
+  MLKD : True
+  AUGNUM : 5
+  FEAT_INTERWEIGHT : 0.1
+  FEAT_INTRAWEIGHT : 1.0
+  LOGIT_INTERWEIGHT : 1.0
+  LOGIT_INTRAWEIGHT : 1.0
 
 
 

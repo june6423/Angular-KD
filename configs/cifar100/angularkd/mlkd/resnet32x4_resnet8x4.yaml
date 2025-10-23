@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL,margin0.1,MLKD,res32x4,res8x4"
+  TAG: "Angular-KD,MLKD,res32x4,res8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD_mlkd"

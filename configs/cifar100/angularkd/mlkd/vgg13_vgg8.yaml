@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL,dot,MLKD,vgg13,vgg8"
+  TAG: "Angular-KD,dot,MLKD,vgg13,vgg8"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD_mlkd"

@@ -1,11 +1,11 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Rebuttal,ReviewKD,Ours_L,res32x4,wrn40_2"
+  TAG: "Angular-KD,CRD,res32x4,res8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "REVIEWKD"
   TEACHER: "resnet32x4"
-  STUDENT: "wrn_40_2" #"resnet8x4"
+  STUDENT: "resnet8x4"
 REVIEWKD:
   REVIEWKD_WEIGHT: 8.0
 SOLVER:
