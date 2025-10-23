@@ -1,69 +1,27 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL,MLKD,res32x4,res8x4"
+  TAG: "Rebuttal,ReviewKD,Ours_L,res32x4,wrn40_2"
   PROJECT: "cifar100_baselines"
 DISTILLER:
-  TYPE: "CRD_mlkd"
+  TYPE: "REVIEWKD"
   TEACHER: "resnet32x4"
-  STUDENT: "resnet8x4"
+  STUDENT: "wrn_40_2" #"resnet8x4"
+REVIEWKD:
+  REVIEWKD_WEIGHT: 8.0
 SOLVER:
   BATCH_SIZE: 64
-  EPOCHS: 480
-  LR: 0.025
+  EPOCHS: 240
+  LR: 0.05
   LR_DECAY_STAGES: [150, 180, 210]
   LR_DECAY_RATE: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "crd_aug" 
 DIV:
   USAGE: True
-  MLKD : True
   AUGNUM : 5
-  FEAT_INTERWEIGHT : 0.1
-  FEAT_INTRAWEIGHT : 1.0
+  FEAT_INTERWEIGHT : 0.0
+  FEAT_INTRAWEIGHT : 0.0
   LOGIT_INTERWEIGHT : 1.0
   LOGIT_INTRAWEIGHT : 1.0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL_dot,dkd,vgg13,vgg8,2"
+  TAG: "Our_FL_2stage,margin0.1_ours_0.3,dkd,vgg13,vgg8"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD"
@@ -15,7 +15,7 @@ SOLVER:
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "crd_dot" 
+  TRAINER: "crd" 
 DKD:
   BETA: 6.0
 DIV:

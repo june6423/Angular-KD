@@ -135,25 +135,31 @@ class BaseTrainer(object):
             "optimizer": self.optimizer.state_dict(),
             "best_acc": self.best_acc,
         }
-        student_state = {"model": self.distiller.module.student.state_dict()}
+        
+        student_available = hasattr(self.distiller.module, 'student')
         save_checkpoint(state, os.path.join(self.log_path, "latest"))
-        save_checkpoint(
-            student_state, os.path.join(self.log_path, "student_latest")
-        )
+        
+        if student_available:
+            student_state = {"model": self.distiller.module.student.state_dict()}
+            save_checkpoint(
+                student_state, os.path.join(self.log_path, "student_latest")
+            )
         if epoch % self.cfg.LOG.SAVE_CHECKPOINT_FREQ == 0:
             save_checkpoint(
                 state, os.path.join(self.log_path, "epoch_{}".format(epoch))
             )
-            save_checkpoint(
-                student_state,
-                os.path.join(self.log_path, "student_{}".format(epoch)),
-            )
+            if student_available:
+                save_checkpoint(
+                    student_state,
+                    os.path.join(self.log_path, "student_{}".format(epoch)),
+                )
         # update the best
         if test_acc >= self.best_acc:
             save_checkpoint(state, os.path.join(self.log_path, "best"))
-            save_checkpoint(
-                student_state, os.path.join(self.log_path, "student_best")
-            )
+            if student_available:
+                save_checkpoint(
+                    student_state, os.path.join(self.log_path, "student_best")
+                )
 
     def train_iter(self, data, epoch, train_meters):
         self.optimizer.zero_grad()

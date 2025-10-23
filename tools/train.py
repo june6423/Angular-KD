@@ -29,8 +29,8 @@ def main(cfg, resume, opts):
         try:
             import wandb
 
-            #wandb.init(project=cfg.EXPERIMENT.PROJECT, name=experiment_name, tags=tags)
-            wandb.init(project="diverse_kd", name=experiment_name, tags=tags)
+            wandb.init(project=cfg.EXPERIMENT.PROJECT, name=experiment_name, tags=tags)
+            #wandb.init(project="angular_kd", name=experiment_name, tags=tags)
         except:
             print(log_msg("Failed to use WANDB", "INFO"))
             cfg.LOG.WANDB = False
@@ -118,9 +118,19 @@ def main(cfg, resume, opts):
             
             if cfg.DIV.USAGE:
                 model_teacher = TeacherEnsemble(cfg, model_teacher, num_classes=num_classes)
+                
+                if cfg.PRETRAINED_CKPT:
+                    print(log_msg(f"Loading pretrained checkpoint from: {cfg.PRETRAINED_CKPT}", "INFO"))
+                    
+                    pretrained_state_dict = load_checkpoint(cfg.PRETRAINED_CKPT)['model']
+                    prefix = 'module.teacher.'
+                    
+                    prefix_len = len(prefix)
+                    pretrained_state_dict_refined = {k[prefix_len:]:v for k,v in pretrained_state_dict.items() if k.startswith(prefix)}
+                    model_teacher.load_state_dict(pretrained_state_dict_refined)
+                    
                 #model_teacher.load_state_dict(load_checkpoint("output/resnet32.pth")["model"])
                 #model_teacher.load_state_dict(load_checkpoint("output/vgg13_latest.pth")["model"])
-                
             
         if "CRD" in cfg.DISTILLER.TYPE:           
             distiller = distiller_dict[cfg.DISTILLER.TYPE](
@@ -157,11 +167,16 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser("training for knowledge distillation.")
     parser.add_argument("--cfg", type=str, default="")
+    parser.add_argument("--pretrained_ckpt", type=str, default=None, help="Path to the pretrained checkpoint file")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("opts", default=None, nargs=argparse.REMAINDER)
 
     args = parser.parse_args()
     cfg.merge_from_file(args.cfg)
     cfg.merge_from_list(args.opts)
+    if args.pretrained_ckpt:
+        cfg.defrost()
+        cfg.PRETRAINED_CKPT = args.pretrained_ckpt
+    
     cfg.freeze()
     main(cfg, args.resume, args.opts)

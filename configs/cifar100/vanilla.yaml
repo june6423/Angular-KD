@@ -1,17 +1,24 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "vanilla,res32x4,res8x4"
+  TAG: "vanilla_2,vgg13"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "NONE"
-  TEACHER: "resnet32x4"
-  STUDENT: "resnet8x4"
+  TEACHER: "vgg13"  #"wrn_40_2" #"vgg13" #"resnet32x4" 
+  STUDENT: "vgg13"  #"wrn_40_2" #"vgg13" #"resnet32x4"
 SOLVER:
   BATCH_SIZE: 64
-  EPOCHS: 240
-  LR: 0.05
-  LR_DECAY_STAGES: [150, 180, 210]
+  EPOCHS: 30
+  LR: 0.1
+  LR_DECAY_STAGES: [10, 20, 30]
   LR_DECAY_RATE: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
+DIV:
+  USAGE: True
+  AUGNUM : 5
+  FEAT_INTERWEIGHT : 0.1
+  FEAT_INTRAWEIGHT : 1.0
+  LOGIT_INTERWEIGHT : 1.0
+  LOGIT_INTRAWEIGHT : 1.0

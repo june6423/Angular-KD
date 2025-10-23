@@ -1,25 +1,69 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "margin0.1,CRD,res32x4,res8x4"
+  TAG: "Our_FL,margin0.1,MLKD,res32x4,res8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
-  TYPE: "CRD"
+  TYPE: "CRD_mlkd"
   TEACHER: "resnet32x4"
   STUDENT: "resnet8x4"
 SOLVER:
   BATCH_SIZE: 64
-  EPOCHS: 240
-  LR: 0.05
+  EPOCHS: 480
+  LR: 0.025
   LR_DECAY_STAGES: [150, 180, 210]
   LR_DECAY_RATE: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "crd" 
+  TRAINER: "crd_aug" 
 DIV:
   USAGE: True
+  MLKD : True
   AUGNUM : 5
   FEAT_INTERWEIGHT : 0.1
   FEAT_INTRAWEIGHT : 1.0
   LOGIT_INTERWEIGHT : 1.0
   LOGIT_INTRAWEIGHT : 1.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

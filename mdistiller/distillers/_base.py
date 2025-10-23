@@ -64,14 +64,14 @@ class Distiller(nn.Module):
 class Vanilla(nn.Module):
     def __init__(self, student):
         super(Vanilla, self).__init__()
-        self.student = student
+        self.teacher = student
 
     def get_learnable_parameters(self):
-        return [v for k, v in self.student.named_parameters()]
+        return [v for k, v in self.teacher.named_parameters()]
 
     def forward_train(self, image, target, **kwargs):
-        logits_student, features_teacher, loss_dict = self.student(image, loss=True, target=target)
-        return logits_student, loss_dict
+        logits_teacher, features_teacher, loss_dict = self.teacher(image, loss=True, target=target)
+        return logits_teacher, loss_dict
     
     def forward(self, **kwargs):
         if self.training:
@@ -79,5 +79,5 @@ class Vanilla(nn.Module):
         return self.forward_test(kwargs["image"])
 
     def forward_test(self, image):
-        return self.student(image)[0]
+        return self.teacher(image)[0]
 

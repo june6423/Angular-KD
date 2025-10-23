@@ -6,12 +6,16 @@ output*/
 detection/datasets
 detection/output
 detection/output*/
+tools/visualizations/
+tools/visualizations
 ckpts/
 *.pth
 *.t7
 tmp*.py
 
 *.pdf
+*.pth
+*.png
 
 
 # Byte-compiled / optimized / DLL files

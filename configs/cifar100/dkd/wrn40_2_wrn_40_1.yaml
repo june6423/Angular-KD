@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "Our_FL_dot,dkd,wrn_40_2,wrn_40_1,2"
+  TAG: "Our_FL_2stage,margin0.1,dkd,wrn_40_2,wrn_40_1"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD"
@@ -9,13 +9,13 @@ DISTILLER:
 SOLVER:
   BATCH_SIZE: 64
   EPOCHS: 240
-  LR: 0.025
+  LR: 0.05
   LR_DECAY_STAGES: [150, 180, 210]
   LR_DECAY_RATE: 0.1
   WEIGHT_DECAY: 0.0005
   MOMENTUM: 0.9
   TYPE: "SGD"
-  TRAINER: "crd_dot" 
+  TRAINER: "crd" 
 DKD:
   BETA: 6.0
 DIV:

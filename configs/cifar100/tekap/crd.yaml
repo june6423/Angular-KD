@@ -1,6 +1,6 @@
 EXPERIMENT:
   NAME: ""
-  TAG: "crd,res32x4,res8x4"
+  TAG: "Rebuttal,TeKAP_time,res32x4,res8x4"
   PROJECT: "cifar100_baselines"
 DISTILLER:
   TYPE: "CRD"
@@ -20,3 +20,5 @@ TEKAP:
   USAGE: True
   AUGNUM : 3
   T : 4
+  FEAT : True
+  LOGIT : True
