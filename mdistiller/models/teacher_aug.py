@@ -59,7 +59,7 @@ def weight_sum_logit(logit_t, view_list, temp=4):
     weight.append(1.0)
     weight = torch.tensor(weight).cuda()
     weight = weight.view(1, -1, 1)
-    weight = F.normalize(weight, p=1, dim=1)        
+    weight = F.normalize(weight, p=2, dim=1)        
     
     view_list_clone.append(logit_t)
     logit_tensor = torch.stack(view_list_clone, dim=1) # [B, N, D]
@@ -74,7 +74,7 @@ def weight_sum_feature(feat_t, view_list):
     weight.append(1.0)
     weight = torch.tensor(weight).cuda()
     weight = weight.view(1, -1, 1)
-    weight = nn.functional.normalize(weight, p=1, dim=1)
+    weight = nn.functional.normalize(weight, p=2, dim=1)
 
     view_list_clone.append(feat_t)
     feat_tensor = torch.stack(view_list_clone, dim=1) # [B, N, D]
@@ -106,12 +106,12 @@ class TeacherEnsemble(nn.Module):
         
         loss_dict = {}
         
-        #with torch.no_grad():
-        self.original_teacher.eval()
-        logit_t, feat_t = self.original_teacher(x)
-        
-        #pooled_feat_grad_on = feat_t["pooled_feat"].detach().requires_grad_()
-        pooled_feat_grad_on = feat_t["pooled_feat"].clone()
+        with torch.no_grad():
+            self.original_teacher.eval()
+            logit_t, feat_t = self.original_teacher(x)
+            
+        pooled_feat_grad_on = feat_t["pooled_feat"].detach().requires_grad_()
+        #pooled_feat_grad_on = feat_t["pooled_feat"].clone()
         
         assert pooled_feat_grad_on.dim() == 2
         

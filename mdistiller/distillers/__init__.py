@@ -1,4 +1,5 @@
 from ._base import Vanilla
+from ._base import Pretrain
 from .KD import KD
 from .AT import AT
 from .OFD import OFD
@@ -17,6 +18,7 @@ from .DKD import DKD
 
 distiller_dict = {
     "NONE": Vanilla,
+    "Pretrain":Pretrain,
     "KD": KD,
     "AT": AT,
     "OFD": OFD,

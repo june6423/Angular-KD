@@ -173,7 +173,7 @@ class BaseTrainer(object):
 
         # forward
         preds, losses_dict = self.distiller(image=image, target=target, epoch=epoch)
-
+        
         # backward                                         
         loss = sum([l.mean() for l in losses_dict.values()])
         loss.backward()

@@ -65,6 +65,7 @@ def validate(val_loader, distiller):
             loss = criterion(output, target)
             #log_prob = torch.log(output + 1e-8)
             #loss = F.nll_loss(log_prob, target)
+            
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
             batch_size = image.size(0)
             losses.update(loss.cpu().detach().numpy().mean(), batch_size)

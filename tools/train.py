@@ -41,7 +41,7 @@ def main(cfg, resume, opts):
     train_loader, val_loader, num_data, num_classes = get_dataset(cfg)
 
     # vanilla
-    if cfg.DISTILLER.TYPE == "NONE":
+    if cfg.DISTILLER.TYPE == "NONE" or cfg.DISTILLER.TYPE == "Pretrain":
         if cfg.DATASET.TYPE == "imagenet":
             model_student = imagenet_model_dict[cfg.DISTILLER.STUDENT](pretrained=False)
         elif cfg.DATASET.TYPE == "tiny_imagenet":
@@ -144,7 +144,7 @@ def main(cfg, resume, opts):
     #distiler = distiller.cuda()
     distiller = torch.nn.DataParallel(distiller.cuda())
     
-    if cfg.DISTILLER.TYPE != "NONE":
+    if cfg.DISTILLER.TYPE != "NONE" and cfg.DISTILLER.TYPE != "Pretrain":
         print(
             log_msg(
                 "Extra parameters of {}: {}\033[0m".format(
@@ -153,7 +153,6 @@ def main(cfg, resume, opts):
                 "INFO",
             )
         )
-
     # train
     trainer = trainer_dict[cfg.SOLVER.TRAINER](
         experiment_name, distiller, train_loader, val_loader, cfg
