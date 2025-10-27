@@ -109,7 +109,6 @@ CUDA_VISIBLE_DEVICES=0 python3 tools/train.py \
 ```
 # evaluate students
 python3 tools/eval.p -m resnet8x4 -c download_ckpts/dkd_resnet8x4 # dkd-resnet8x4 on cifar100
-python3 tools/eval.p -m MobileNetV1 -c download_ckpts/imgnet_dkd_mv1 -d imagenet # dkd-mv1 on imagenet
 python3 tools/eval.p -m model_name -c output/your_exp/student_best # your checkpoints
 ```
 
