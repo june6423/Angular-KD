@@ -1,7 +1,7 @@
 ## Single-Teacher View Augmentation: Boosting Knowledge Distillation via Angular Diversity
 
 [![Conference](https://img.shields.io/badge/NeurIPS-2025-blue.svg)](https://neurips.cc/virtual/2025/poster/118239)
-[![arXiv](https://img.shields.io/badge/arXiv-Coming%20Soon-b31b1b.svg)](https://arxiv.org/abs/<TODO:_ADD_LINK>)
+[![arXiv](https://img.shields.io/badge/Arxiv-2510.22480-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2510.22480)
 
 This repository is the official PyTorch implementation for our NeurIPS 2025 paper: **Single-Teacher View Augmentation: Boosting Knowledge Distillation via Angular Diversity**.
 
