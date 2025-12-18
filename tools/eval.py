@@ -12,6 +12,7 @@ from mdistiller.engine.utils import load_checkpoint, validate
 from mdistiller.engine.cfg import CFG as cfg
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", type=str, default="")
