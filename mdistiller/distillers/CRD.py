@@ -176,7 +176,8 @@ class CRD(Distiller):
         logits_student, feature_student = self.student(image)
         
         if self.cfg.DIV.USAGE:
-            image_for_teacher = teacher_augmentation(image.clone())
+            #image_for_teacher = teacher_augmentation(image.clone())
+            image_for_teacehr = image
             logits_teacher, feature_teacher, loss_dict = self.teacher(image_for_teacher, loss=True, target=target)
             
             loss_ce = self.ce_loss_weight * F.cross_entropy(logits_student, target)         
