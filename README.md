@@ -120,7 +120,7 @@ If you find this work helpful, please cite our paper:
 ```
 @inproceedings{Yu2025angular,
   title={Single-Teacher View Augmentation: Boosting Knowledge Distillation via Angular Diversity},
-  author={Seonghoon Yu*, Dongjun Nam*, Dina Katabi and Jeany Son},
+  author={Seonghoon Yu, Dongjun Nam, Dina Katabi and Jeany Son},
   booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
   year={2025}
 }
